@@ -1,0 +1,64 @@
+---
+title: "Harshith Kumar Yadav_MSBA_64060_Assignment-1"
+author: "Harshith Kumar Yadav Temura"
+date: "2023-09-08"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+---
+```{r setup, include = TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+#  Download data set
+# Import
+https://www.kaggle.com/datasets/aungpyaeap/supermarket-sales
+
+```{r}
+
+supermarket_sales <- read.csv("C:/Users/Harshith Kumar/Downloads/supermarket_sales.csv", header = TRUE, sep = ",")
+
+head(supermarket_sales)
+
+```
+
+
+# Descriptive statistics for quantitative variables
+```{r}
+
+summary(supermarket_sales$Unit_price)
+summary(supermarket_sales$Total)
+
+```
+
+# Descriptive statistics for categorical variables
+```{r}
+table(supermarket_sales$Payment)
+table(supermarket_sales$Product.line)
+
+
+```
+# Transformation of the data
+
+```{r}
+net.income <-  supermarket_sales$gross.income - supermarket_sales$Tax
+supermarket_sales$net.income <- c(net.income)
+changed_price = supermarket_sales$cogs/10
+
+```
+
+```{r}
+
+plot(x =changed_price, y =supermarket_sales$Quantity,
+     xlab = "changed_price",
+     ylab = "Quantity",
+     xlim = c(0,10),
+     ylim = c(2,9),
+     main = "Sales"
+)
+```
+
+```{r}
+product_table = table(supermarket_sales$Product.line)
+barplot(product_table, xlab = "Product line", ylab = "Quantity",main = "sales",col = "red")
+```
