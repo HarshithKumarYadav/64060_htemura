@@ -1,0 +1,249 @@
+---
+title: "FML Assignment 2"
+author: "Harshith Kumar Yadav Temura"
+date: "10-01-2023"
+output:
+  html_document: default
+  word_document: default
+  pdf_document: default
+---
+
+
+**loading the libraries**
+```{R}
+library(class)
+library(caret)
+library(e1071)
+
+```
+**loading the data**
+
+```{R}
+Bank = read.csv("C:\\Users\\Harshith Kumar\\OneDrive\\Desktop\\fml\\UniversalBank (1).csv")
+dim(Bank)
+t(t(names(Bank)))
+
+```
+**Drop ID and ZIP** 
+
+```{R}
+Bank = Bank[,-c(1,5)]
+
+```
+
+**conversion of factor(Education)** 
+
+```{R}
+#Only Education needs to be converted into Factor in dataset
+Bank$Education = as.factor(Bank$Education)
+levels(Bank$Education)
+
+#Now, Convert Education to Dummy Variables
+
+groups = dummyVars(~.,data = Bank) #This created a dummy variable 
+
+Bank.Mod = as.data.frame(predict(groups,Bank))
+
+```
+**To have a consistent random selection we are setting up the value of set seed to 5**
+```{R}
+set.seed(5)
+
+training.dif = sample(row.names(Bank.Mod),0.6*dim(Bank.Mod)[1])
+validation.dif = setdiff(row.names(Bank.Mod),training.dif)
+train.diff = Bank.Mod[training.dif,]
+valid.diff = Bank.Mod[validation.dif,]
+t(t(names(train.diff)))
+
+#Second approach
+
+library(caTools)
+set.seed(1)
+split <- sample.split(Bank.Mod, SplitRatio = 0.6)
+train_set <- subset(Bank.Mod, split == TRUE)
+valid_set <- subset(Bank.Mod, split == FALSE)
+
+# Printing the sizes of the training and validation datasets.
+print(paste("The size of the training set is:", nrow(train_set)))
+print(paste("The size of the validation set is:", nrow(valid_set)))
+```
+
+**Normalization of the dataset**
+
+```{R}
+train.normal.diff <- train.diff[,-10] # Note that Personal Income is the 10th variable
+valid.normal.diff <- valid.diff[,-10]
+
+normal.values <- preProcess(train.diff[, -10], method=c("center", "scale"))
+train.normal.diff <- predict(normal.values, train.diff[, -10])
+valid.normal.diff <- predict(normal.values, valid.diff[, -10])
+
+```
+
+
+**Question No:1**
+
+Consider the following customer:
+
+1. Age = 40, Experience = 10, Income = 84, Family = 2, CCAvg = 2, Education_1 = 0, Education_2 = 1, Education_3 = 0, Mortgage = 0, Securities Account = 0, CD Account = 0, Online = 1, and Credit Card = 1. Perform a k-NN classification with all predictors except ID and ZIP code using k = 1. Remember to transform categorical predictors with more than two categories into dummy variables first. Specify the success class as 1 (loan acceptance), and use the default cutoff value of 0.5. How would this customer be classified?
+
+```{r}
+# We have converted all categorical variables to dummy variables
+# Let's create a new sample
+New_CustomerX <- data.frame(
+  Age = 40,
+  Experience = 10,
+  Income = 84,
+  Family = 2,
+  CCAvg = 2,
+  Education.1 = 0,
+  Education.2 = 1,
+  Education.3 = 0,
+  Mortgage = 0,
+  Securities.Account = 0,
+  CD.Account = 0,
+  Online = 1,
+  CreditCard = 1
+)
+
+# Normalize the new customer
+New.Cust.normal <- New_CustomerX
+New.Cust.normal <- predict(normal.values, New.Cust.normal)
+
+```
+
+**prediction using KNN**
+
+```{r}
+
+KNN.Prediction1 <- class::knn(train = train.normal.diff, 
+                       test = New.Cust.normal, 
+                       cl = train.diff$Personal.Loan, k = 1)
+KNN.Prediction1
+
+```
+
+***
+
+2. What is a choice of K that balances between over-fitting and ignoring the predictor information?
+
+```{r}
+#Calculating the accuracy for each value of k
+#Set the range of k values 
+
+accuracy.diff <- data.frame(k = seq(1, 15, 1), overallaccuracy = rep(0, 15))
+for(i in 1:15) {
+  KNN.Predct <- class::knn(train = train.normal.diff, 
+                         test = valid.normal.diff, 
+                         cl = train.diff$Personal.Loan, k = i)
+  accuracy.diff[i, 2] <- confusionMatrix(KNN.Predct,   
+                                    as.factor(valid.diff$Personal.Loan),positive = "1")$overall[1]
+}
+
+which(accuracy.diff[,2] == max(accuracy.diff[,2])) 
+
+plot(accuracy.diff$k,accuracy.diff$overallaccuracy)
+
+```
+
+
+
+***
+
+**Question 3**
+
+**3. Show the confusion matrix for the validation data that results from using the best k**
+
+```{R}
+
+KNN.Prediction2 <- class::knn(train = train.normal.diff, 
+                         test = valid.normal.diff, 
+                         cl = train.diff$Personal.Loan, k = 3)
+
+confusionMatrix(KNN.Prediction2,as.factor(valid.diff$Personal.Loan))
+
+```
+***
+
+**Question 4**
+
+**Consider the following customer: Age = 40, Experience = 10, Income = 84, Family = 2, CCAvg = 2, #Education_1 = 0, Education_2 = 1, Education_3 = 0, Mortgage = 0, Securities Account = 0, CD #Account = 0, Online = 1 and Credit Card = 1. Classify the customer using the best k**
+```{r}
+#Classifying the customer using the best K.
+
+New_CustomerY = data.frame(
+  Age = 40, 
+  Experience = 10, 
+  Income = 84, 
+  Family = 2,
+  CCAvg = 2, 
+  Education.1 = 0, 
+  Education.2 = 1, 
+  Education.3 = 0, 
+  Mortgage = 0, 
+  Securities.Account = 0, 
+  CD.Account = 0, 
+  Online = 1, 
+  CreditCard = 1
+)
+
+KNN.Prediction3 <- class::knn(train = train.normal.diff, 
+                         test = New_CustomerY, 
+                         cl = train.diff$Personal.Loan, k = 3)
+
+KNN.Prediction3
+
+#The customer has been classified as approved for personal loan
+
+```
+***
+**Question5**
+
+**Repartition the data, this time into training, validation, and test sets (50% : 30% : 20%). Apply**
+
+```{R}
+set.seed(5)
+#Let's take 50% of the entire modified data as Training data 
+train.diff2 = sample(row.names(Bank.Mod), 0.5*dim(Bank.Mod)[1])
+
+#Let's take 30% of the data from the remaining 50% as Validation Data 
+valid.diff2 = sample(setdiff(row.names(Bank.Mod), train.diff2), 0.3*dim(Bank.Mod)[1])
+
+#Let's take remaining 20% of the modified data as Test Data
+test.diff2 = setdiff(row.names(Bank.Mod), union(train.diff2,valid.diff2))
+
+train.normal.diff2 = Bank.Mod[train.diff2,]
+valid.normal.diff2 = Bank.Mod[valid.diff2,]
+test.normal.diff2 = Bank.Mod[test.diff2,]
+
+#transporting the data
+t(t(names(train.normal.diff2)))
+
+
+# Applying the k-NN method with the chosen value K.
+
+trainknn2 = knn(train = train.normal.diff2[,-8], test = train.normal.diff2[,-8], cl = train.normal.diff2[,8], k=3)
+
+validknn2 = knn(train = train.normal.diff2[,-8], test = valid.normal.diff2[,-8], cl = train.normal.diff2[,8], k=3)
+
+testknn2 = knn(train = train.normal.diff2[,-8], test = test.normal.diff2[,-8], cl = train.normal.diff2[,8], k=3)
+```
+**Comparing the confusion matrix of the training set, validation sets and test set**
+```{r}
+
+Confusionmatrix_trainknn2 = confusionMatrix(trainknn2, as.factor(train.normal.diff2$Personal.Loan),positive = "1")
+
+Confusionmatrix_trainknn2
+
+
+Confusionmatrix_validknn2 = confusionMatrix(validknn2, as.factor(valid.normal.diff2$Personal.Loan),positive = "1")
+
+Confusionmatrix_trainknn2
+
+
+Confusionmatrix_testknn2 = confusionMatrix(testknn2, as.factor(test.normal.diff2$Personal.Loan),positive = "1")
+
+Confusionmatrix_trainknn2
+```
+
+
